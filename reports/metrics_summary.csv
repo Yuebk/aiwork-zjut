@@ -1,0 +1,7 @@
+model,test_loss,test_acc
+lenet,1.0815,63.01
+lenet_advanced,0.9803,66.31
+simple_vgg,0.5169,82.52
+lenet,1.0815,63.01
+lenet_advanced,0.9803,66.31
+simple_vgg,0.5169,82.52

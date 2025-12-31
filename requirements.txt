@@ -1,0 +1,17 @@
+# Core training and data
+torch
+torchvision
+
+# Visualization and logging
+matplotlib
+tensorboard
+
+# Model export / visualization
+onnx
+onnxscript
+torchinfo
+torchviz
+graphviz
+
+# Image processing
+pillow
