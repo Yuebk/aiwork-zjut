@@ -1,3 +1,6 @@
+#C:\Users\娄苏萌\AppData\Local\Programs\Python\Python313\python.exe d:/project/aiwork-zjut/demo.py --model lenet
+#C:\Users\娄苏萌\AppData\Local\Programs\Python\Python313\python.exe d:/project/aiwork-zjut/demo.py --model lenet_advanced
+#C:\Users\娄苏萌\AppData\Local\Programs\Python\Python313\python.exe d:/project/aiwork-zjut/demo.py --model simple_vgg
 import os
 import argparse
 import importlib.util
