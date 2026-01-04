@@ -14,6 +14,7 @@ import torchvision.transforms as transforms
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 # 基础常量
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -131,20 +132,55 @@ def run_on_test_samples(model_key: str, weights: str, device: torch.device, coun
         transforms.Normalize(*STATS),
     ])
     ds = torchvision.datasets.CIFAR10(root=DATA_ROOT, train=False, download=True, transform=transform)
-    # 逐个保存预测图
-    for i in range(min(count, len(ds))):
-        img_tensor, true_label = ds[i]
+    # 随机不放回抽样并逐个保存预测图，统计准确率（top-1）
+    n = min(count, len(ds))
+    indices = list(range(len(ds)))
+    sampled = random.sample(indices, n)
+
+    total = 0
+    correct = 0
+    for out_idx, ds_idx in enumerate(sampled):
+        img_tensor, true_label = ds[ds_idx]
         img_np = (img_tensor.permute(1, 2, 0).numpy() * STATS[1] + STATS[0])  # 反标准化近似显示
         img_np = (img_np.clip(0, 1) * 255).astype('uint8')
         img = Image.fromarray(img_np)
         probs, labels = classify_tensor(model, device, img_tensor.unsqueeze(0), topk=3)
+        # labels 为字符串类别名，取 top-1
+        pred_label_name = labels[0] if labels else ''
+        try:
+            pred_idx = CLASSES.index(pred_label_name)
+        except ValueError:
+            pred_idx = -1
+
+        total += 1
+        if pred_idx == true_label:
+            correct += 1
+
         top_text = ", ".join([f"{labels[j]} {probs[j]*100:.1f}%" for j in range(len(labels))])
         text = f"pred: {top_text} | true: {CLASSES[true_label]}"
         annotated = annotate_image(img.resize((128, 128)), text)
-        out_path = os.path.join(REPORT_IMG_DIR, f"{model_key}_test_{i}.png")
+        out_path = os.path.join(REPORT_IMG_DIR, f"{model_key}_test_{out_idx}.png")
         annotated.save(out_path)
-        if i < 5:
-            print(f"[Sample] {i}: {text} -> {out_path}")
+        if out_idx < 5:
+            print(f"[Sample] {out_idx}: {text} -> {out_path}")
+
+    # 为避免小样本导致的误导性百分比，计算并输出对整个测试集的总体准确率（Top-1），保留更多小数位
+    loader = torch.utils.data.DataLoader(ds, batch_size=512, shuffle=False,
+                                         num_workers=0, pin_memory=(device.type == 'cuda'))
+    all_correct = 0
+    all_total = 0
+    with torch.no_grad():
+        for images, labels in loader:
+            images = images.to(device)
+            labels = labels.to(device)
+            logits = model(images)
+            preds = logits.argmax(dim=1)
+            all_correct += int((preds == labels).sum().item())
+            all_total += labels.size(0)
+
+    if all_total > 0:
+        acc_all = all_correct / all_total * 100.0
+        print(f"[Summary] Full test set Accuracy: {acc_all:.4f}% ")
 
 
 def get_test_loader(batch_size: int = 512, num_workers: int = 0, pin_memory: bool = False):
